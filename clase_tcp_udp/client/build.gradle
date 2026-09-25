@@ -1,3 +1,14 @@
+apply plugin: 'java'
+apply plugin: 'application'
+
+repositories {
+    mavenCentral()
+}
+
 dependencies {
-    implementation project(':server')
+    implementation 'com.google.code.gson:gson:2.10.1'
+}
+
+application {
+    mainClass = 'co.icesi.buscaminas.client.MainClient'
 }

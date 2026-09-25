@@ -9,7 +9,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import com.google.gson.Gson;
@@ -21,16 +21,11 @@ import co.icesi.buscaminas.model.Cell;
 import co.icesi.buscaminas.services.ServicesImpl;
 
 public class TCPController {
-
-    private ServicesImpl services;
-
-    private ServerSocket serverSocket;
-
+    private final ServicesImpl services;
+    private final ServerSocket serverSocket;
+    private final ExecutorService executor;
+    private final Gson gson;
     private boolean running;
-
-    private Executor executor;
-
-    private Gson gson;
 
     public TCPController(ServicesImpl services) {
         this(services, 12345);
@@ -39,13 +34,13 @@ public class TCPController {
     public TCPController(ServicesImpl services, int port) {
         this.services = services;
         try {
-            serverSocket = new ServerSocket(port, 50, InetAddress.getByName("0.0.0.0"));// Cambiar a la IP de tu máquina, esta ip acepta conexiones de todas las tarjetas de red
-            executor = Executors.newFixedThreadPool(5);
-            gson = new GsonBuilder().create();
+            this.serverSocket = new ServerSocket(port, 50, InetAddress.getByName("0.0.0.0"));
+            this.executor = Executors.newFixedThreadPool(5);
+            this.gson = new GsonBuilder().create();
         } catch (Exception e) {
-            e.printStackTrace();
+            throw new IllegalStateException("No se pudo iniciar el servidor TCP en el puerto " + port, e);
         }
-        running = true;
+        this.running = true;
     }
 
     public void setRunning(boolean running) {
@@ -60,12 +55,17 @@ public class TCPController {
         System.out.println("TCP Service started on port " + serverSocket.getLocalPort());
         while (running) {
             try {
-                executor.execute(new TCPClientHandler(serverSocket.accept(), services));
+                Socket clientSocket = serverSocket.accept();
+                executor.execute(new TCPClientHandler(clientSocket, services));
             } catch (Exception e) {
-                e.printStackTrace();
+                if (running) {
+                    e.printStackTrace();
+                }
             }
         }
+
         try {
+            executor.shutdown();
             serverSocket.close();
         } catch (Exception e) {
             e.printStackTrace();
@@ -73,9 +73,8 @@ public class TCPController {
     }
 
     class TCPClientHandler implements Runnable {
-        //TODO: 
-        private Socket clientSocket;
-        private ServicesImpl services;
+        private final Socket clientSocket;
+        private final ServicesImpl services;
 
         public TCPClientHandler(Socket clientSocket, ServicesImpl services) {
             this.clientSocket = clientSocket;
@@ -90,49 +89,65 @@ public class TCPController {
                 BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
 
                 String line = reader.readLine();
+                if (line == null || line.isBlank()) {
+                    writer.write(gson.toJson(new Response()));
+                    writer.newLine();
+                    writer.flush();
+                    return;
+                }
+
                 Request rq = gson.fromJson(line, Request.class);
-                Map<String, String> data = rq.data;
                 Response response = new Response();
                 response.data = new HashMap<>();
+
+                if (rq == null || rq.action == null || rq.data == null) {
+                    response.status = "ERROR";
+                    response.data.put("message", "Solicitud inválida: action/data faltantes");
+                    writer.write(gson.toJson(response));
+                    writer.newLine();
+                    writer.flush();
+                    return;
+                }
+
+                Map<String, String> data = rq.data;
                 switch (rq.action) {
-                    case "SELECT_CELL":
+                    case "SELECT_CELL": {
                         int i = Integer.parseInt(data.get("i"));
                         int j = Integer.parseInt(data.get("j"));
                         try {
                             boolean resp = services.selectCell(i, j);
                             response.status = "OK";
                             response.data.put("win", resp);
-
                             response.data.put("gameEnd", resp);
                         } catch (Exception e) {
+                            response.status = "ERROR";
                             response.data.put("gameEnd", true);
                             response.data.put("win", false);
-
+                            response.data.put("message", e.getMessage());
                         }
                         Cell[][] board = services.printBoard();
                         response.data.put("board", board);
                         break;
+                    }
                     case "SOW_ALL":
                         services.showAll(true);
-                        board = services.printBoard();
                         response.status = "OK";
-                        response.data.put("board", board);
+                        response.data.put("board", services.printBoard());
                         break;
                     case "GET_BOARD":
-                        board = services.printBoard();
                         response.status = "OK";
-                        response.data.put("board", board);
+                        response.data.put("board", services.printBoard());
                         break;
-                    case "INIT_GAME":
-                        i = Integer.parseInt(data.get("n"));
-                        j = Integer.parseInt(data.get("m"));
+                    case "INIT_GAME": {
+                        int i = Integer.parseInt(data.get("n"));
+                        int j = Integer.parseInt(data.get("m"));
                         int m = Integer.parseInt(data.get("minas"));
                         services.initGame(i, j, m);
-                        board = services.printBoard();
                         response.status = "OK";
-                        response.data.put("board", board);
+                        response.data.put("board", services.printBoard());
                         break;
-                    case "MARK_CELL":
+                    }
+                    case "MARK_CELL": {
                         int mi = Integer.parseInt(data.get("i"));
                         int mj = Integer.parseInt(data.get("j"));
                         try {
@@ -142,28 +157,25 @@ public class TCPController {
                             response.status = "ERROR";
                             response.data.put("message", e.getMessage());
                         }
-                        board = services.printBoard();
-                        response.data.put("board", board);
+                        response.data.put("board", services.printBoard());
                         break;
-
+                    }
                     default:
+                        response.status = "ERROR";
+                        response.data.put("message", "Acción no soportada: " + rq.action);
                         break;
                 }
 
-                String json = gson.toJson(response);
-                writer.write(json);
+                writer.write(gson.toJson(response));
                 writer.newLine();
                 writer.flush();
                 writer.close();
                 reader.close();
-
                 clientSocket.close();
                 System.out.println("Client disconnected: " + clientSocket.getInetAddress());
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
-
     }
-
 }

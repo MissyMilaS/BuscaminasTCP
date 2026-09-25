@@ -2,6 +2,7 @@ package co.icesi.buscaminas.client;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
@@ -13,10 +14,9 @@ import co.icesi.buscaminas.controllers.dtos.Request;
 import co.icesi.buscaminas.controllers.dtos.Response;
 
 public class TCPClient {
-
-    private String host;
-    private int port;
-    private Gson gson;
+    private final String host;
+    private final int port;
+    private final Gson gson;
 
     public TCPClient(String host, int port) {
         this.host = host;
@@ -29,25 +29,19 @@ public class TCPClient {
              BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
              BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
 
-            // 1. Serializar el objeto Request a una cadena JSON
             String jsonRequest = gson.toJson(request);
-
-            // 2. Enviar el JSON al servidor seguido de un salto de línea
             writer.write(jsonRequest);
             writer.newLine();
             writer.flush();
 
-            // 3. Leer la línea de respuesta enviada por el servidor
             String jsonResponse = reader.readLine();
-
-            // 4. Deserializar la respuesta JSON a un objeto Response
-            if (jsonResponse != null) {
-                return gson.fromJson(jsonResponse, Response.class);
+            if (jsonResponse == null || jsonResponse.isBlank()) {
+                return null;
             }
-
-        } catch (Exception e) {
+            return gson.fromJson(jsonResponse, Response.class);
+        } catch (IOException e) {
             System.err.println("Error de comunicación con el servidor: " + e.getMessage());
+            return null;
         }
-        return null;
     }
 }
