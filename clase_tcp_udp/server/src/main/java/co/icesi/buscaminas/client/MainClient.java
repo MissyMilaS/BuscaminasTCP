@@ -1,6 +1,5 @@
 package co.icesi.buscaminas.client;
 
-//import java.util.ArrayList; este no se usa
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
