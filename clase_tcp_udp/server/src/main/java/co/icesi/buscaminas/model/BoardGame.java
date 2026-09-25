@@ -8,12 +8,26 @@ public class BoardGame {
 
     private int mines;
 
+    private boolean gameFinished;
+
+    private boolean gameWon;
+
     public int getMines() {
         return mines;
     }
 
+    public boolean isGameFinished() {
+        return gameFinished;
+    }
+
+    public boolean isGameWon() {
+        return gameWon;
+    }
+
     public synchronized int initGame(int n, int m, int mines){
         this.mines = mines;
+        this.gameFinished = false;
+        this.gameWon = false;
         board = new Cell[n][m];
         Random rd = new Random();
         int mi = 0;
@@ -79,18 +93,29 @@ public class BoardGame {
         }
     }
     public synchronized boolean selectCell(int i, int j){
+        if (gameFinished) {
+            return gameWon;
+        }
         if(i<0 || i>= board.length || j<0 || j >= board[0].length ){
             throw new RuntimeException("Cell no valid");
         }
         Cell cell = board[i][j];
         if(cell.isLandMine()){
             showAll(true);
+            gameFinished = true;
+            gameWon = false;
             throw new RuntimeException("Game over");
         }else {
             if (cell.isHide()) {
                 showCells(i,j,true);
             }
-            return validWin();
+            boolean win = validWin();
+            if (win) {
+                gameFinished = true;
+                gameWon = true;
+                showAll(true);
+            }
+            return win;
         }
     }
 

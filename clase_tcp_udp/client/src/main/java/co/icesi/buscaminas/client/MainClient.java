@@ -7,6 +7,7 @@ import java.util.Scanner;
 import co.icesi.buscaminas.controllers.dtos.Request;
 import co.icesi.buscaminas.controllers.dtos.Response;
 
+
 public class MainClient {
 
     public static void main(String[] args) {
@@ -17,14 +18,14 @@ public class MainClient {
         System.out.println("   CLIENTE BUSCAMINAS TCP   ");
 
         while (!exit) {
-            System.out.println("\n--- MENÚ DE ACCIONES ---");
+            System.out.println("\n--- MENU DE ACCIONES ---");
             System.out.println("1. Iniciar nuevo juego (INIT_GAME)");
             System.out.println("2. Obtener tablero actual (GET_BOARD)");
             System.out.println("3. Seleccionar casilla (SELECT_CELL)");
             System.out.println("4. Marcar/Desmarcar bandera (MARK_CELL)");
             System.out.println("5. Revelar todo (SOW_ALL)");
             System.out.println("6. Salir");
-            System.out.print("Elige una opción: ");
+            System.out.print("Elige una opcion: ");
 
             if (!scanner.hasNextInt()) {
                 scanner.next();
@@ -85,6 +86,14 @@ public class MainClient {
                 System.out.println("\n[Servidor] Estado: " + response.status);
                 if (response.data != null && response.data.containsKey("board")) {
                     printFormattedBoard(response.data.get("board"));
+                }
+                if (response.data != null && Boolean.TRUE.equals(response.data.get("gameEnd"))) {
+                    if (Boolean.TRUE.equals(response.data.get("win"))) {
+                        System.out.println("\n¡Ganaste! El juego ha terminado.");
+                    } else {
+                        System.out.println("\n¡Perdiste! El juego ha terminado.");
+                    }
+                    break;
                 }
             } else {
                 System.out.println("\n[Error] No se recibió respuesta del servidor.");

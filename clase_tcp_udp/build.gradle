@@ -29,7 +29,7 @@ dependencies {
     testCompile 'junit:junit:4.12'
 }
 */
-subprojects{
+subprojects {
     apply plugin: 'java'
 
     repositories {
@@ -39,20 +39,36 @@ subprojects{
     dependencies {
         implementation 'com.google.code.gson:gson:2.10.1'
     }
+}
 
-    jar {
-        manifest {
-            attributes(
-                    'Main-Class': project.name == 'client'
-                            ? 'co.icesi.buscaminas.client.MainClient'
-                            : 'co.icesi.buscaminas.Main'
-            )
-        }
+project(':common') {
+    // Definición explícita del módulo compartido
+}
 
-        doFirst {
-            manifest.attributes(
-                    'Class-Path': configurations.runtimeClasspath.collect { it.toURI() }.join(' ')
-            )
-        }
+project(':server') {
+    apply plugin: 'application'
+
+    dependencies {
+        implementation project(':common')
+    }
+
+    application {
+        mainClass = 'co.icesi.buscaminas.Main'
+    }
+}
+
+project(':client') {
+    apply plugin: 'application'
+
+    dependencies {
+        implementation project(':common')
+    }
+
+    application {
+        mainClass = 'co.icesi.buscaminas.client.MainClient'
+    }
+
+    run {
+        standardInput = System.in
     }
 }

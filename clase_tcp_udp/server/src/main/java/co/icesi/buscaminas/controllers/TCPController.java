@@ -100,14 +100,14 @@ public class TCPController {
                         int j = Integer.parseInt(data.get("j"));
                         try {
                             boolean resp = services.selectCell(i, j);
-                            response.status = "OK";
+                            response.status = resp ? "WIN" : "OK";
                             response.data.put("win", resp);
-
                             response.data.put("gameEnd", resp);
                         } catch (Exception e) {
+                            response.status = "LOSE";
                             response.data.put("gameEnd", true);
                             response.data.put("win", false);
-
+                            response.data.put("message", e.getMessage());
                         }
                         Cell[][] board = services.printBoard();
                         response.data.put("board", board);

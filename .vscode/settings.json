@@ -1,0 +1,12 @@
+{
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "java.project.sourcePaths": [
+        "clase_tcp_udp/common/src/main/java",
+        "clase_tcp_udp/server/src/main/java",
+        "clase_tcp_udp/client/src/main/java"
+    ],
+    "java.project.outputPath": "clase_tcp_udp/build/vscode-bin",
+    "java.project.referencedLibraries": [
+        "${userHome}/.gradle/caches/modules-2/files-2.1/com.google.code.gson/gson/2.10.1/**/*.jar"
+    ]
+}

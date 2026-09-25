@@ -16,5 +16,6 @@ include 'services:webservice'
 */
 
 rootProject.name = 'clase_tcp_udp'
+include 'common'
 include 'server'
 include 'client'
